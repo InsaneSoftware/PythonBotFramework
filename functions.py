@@ -325,15 +325,15 @@ def run_with_controls(task_fn: Callable[..., None], *args, **kwargs) -> None:
 
     def _runner():
         try:
-            log("Worker thread started.")
+            log("Bot thread started.")
             task_fn(*args, **kwargs)
         except Exception as e:
-            log(f"Worker crashed: {e}")
+            log(f"Bot crashed: {e}")
         finally:
             # Als de taak klaar is of crasht, reset running state
             _RUN_EVENT.clear()
             _PAUSE_EVENT.clear()
-            log("Worker thread finished.")
+            log("Bot thread finished.")
 
     _THREAD_REF = threading.Thread(target=_runner, daemon=True)
     _THREAD_REF.start()
