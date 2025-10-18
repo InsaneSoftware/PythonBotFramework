@@ -1,1 +1,190 @@
-# PythonBotFramework
+# Python Bot Framework — Quick Start (Windows)
+
+Welcome! This tiny framework lets you build **simple, reliable desktop bots** using global hotkeys:
+- **F2** → Start a run
+- **F3** → Pause / Resume
+- **F4** → Stop and exit
+- **F12** → (Optional) Take a screenshot (if enabled)
+
+It uses image recognition (via `pyautogui` + OpenCV), window helpers, and safe hotkey controls so **you press F2 to run your task once**. When the task finishes, just press **F2 again** to run it again.
+
+> 🟢 New to Python? No worries — follow this guide step‑by‑step and you’ll be running your first automation in minutes.
+
+
+---
+
+## 1) Requirements
+
+- **Windows 10/11**
+- **Python 3.9–3.12** installed and on PATH (check with: `python --version`)
+- A standard user is OK, but some global hotkeys may need **Run as Administrator**.
+
+Run `install_requirements.bat` (included) to install everything you need.
+
+This installs:
+- `pyautogui` (mouse/keyboard automation, screenshots)
+- `opencv-python` (required for image matching with confidence)
+- `Pillow` (images, required by pyautogui)
+- `psutil` (process info)
+- `pygetwindow` (window helper utilities)
+- `pywin32` (Windows window control)
+- `keyboard` (global hotkeys)
+
+
+---
+
+## 2) Project Layout
+
+```
+PythonBotFramework/
+├─ main.py            # Your bot entry point (edit here)
+├─ functions.py       # The helper library (hotkeys, windows, images, etc)
+├─ README.md          # This file
+└─ img/               # Put your reference screenshots here (you create this)
+   └─ start_windows.png  # Example image used by main.py
+```
+
+> If `img/` does not exist yet, create it next to `main.py` and place your reference images there as PNG files.
+
+
+---
+
+## 3) Installation
+
+1. **Unzip** this project to a folder like `C:\Bots\PythonBotFramework\`
+2. **Double‑click** `install_requirements.bat` (or run it in a terminal).
+3. (Optional) Create the `img` folder and add your first image:  
+   `img/start_windows.png` — a small screenshot of the Windows Start button (or anything your bot needs to find).
+4. **Run the bot**: open a terminal in the folder and run:
+   ```bat
+   python main.py
+   ```
+   You’ll see logs in the terminal.
+
+
+---
+
+## 4) How to Use the Hotkeys
+
+- **F2 — Start**: begins one run of `my_bot()` (from `main.py`). When it finishes, press **F2** again to run it again.
+- **F3 — Pause/Resume**: temporarily freezes your bot’s loop. `functions.is_paused()` will be `True` while paused.
+- **F4 — Stop**: stops the controller and exits cleanly.
+- **F12 — Screenshot** *(only if you enable this hotkey)*: saves a screen capture to the current folder.
+
+
+---
+
+## 5) Write Your Bot (edit `main.py`)
+
+`main.py` contains a minimal example:
+
+```python
+import functions as fn
+
+def my_bot():
+    # Wait if paused
+    while fn.is_paused():
+        fn.time.sleep(0.1)
+
+    # Only run if the user actually pressed Start (F2)
+    if not fn.should_run():
+        return
+
+    # --- Your BOT CODE ---
+    fn.close_window_by_title_part("Calc")
+    fn.find_and_click("start_windows")   # looks for img/start_windows.png
+    fn.random_sleep(1, 2)
+    fn.type_text("calc")
+    fn.random_sleep(0.5, 1)
+    fn.press_key("enter")
+    fn.random_sleep(0.5, 1)
+    fn.focus_window("calc")
+    fn.type_text("1337")
+    fn.log("✅ Run complete.")
+
+# Universal controller: F2 start, F3 pause, F4 stop
+if __name__ == "__main__":
+    fn.run_hotkey_bot(my_bot)
+```
+
+### Common helpers you’ll use
+- **Image match + click**
+  - `fn.find("image_name", confidence=0.85)` → waits until `img/image_name.png` is visible
+  - `fn.find_and_click("image_name", confidence=0.85, double=False)` → waits then clicks the center
+- **Typing & keys**
+  - `fn.type_text("hello")`, `fn.press_key("enter")`, `fn.press_keys("ctrl", "s")`
+- **Windows**
+  - `fn.focus_window("Notepad")`, `fn.find_windows(r"chrome", ignore_case=True)`
+- **Timing**
+  - `fn.random_sleep(0.5, 1.5)` → more human‑like delays
+- **Run state**
+  - `fn.is_running()`, `fn.is_paused()`, `fn.should_run()`
+
+> 🔎 **Tip**: Keep your reference images small, cropped tight, and taken at **100% display scaling** for best matching.
+
+
+---
+
+## 6) Changing Hotkeys
+
+By default, `run_hotkey_bot()` sets:
+- Start = **F2**
+- Stop  = **F4**
+- Pause = **F3**
+- Screenshot = **F12**
+
+If you prefer custom keys, you can register them at the start of your program:
+
+```python
+fn.setup_hotkeys(start_key="F6", stop_key="F8", pause_key="F7", screenshot_key=None)
+```
+
+You can also add **custom hotkeys**:
+
+```python
+fn.setup_hotkeys(custom_hotkeys={
+    "ctrl+alt+h": lambda: fn.log("Hello!"),
+})
+```
+
+*(When you use `run_hotkey_bot()`, it already sets F2/F3/F4/F12 for you.)*
+
+
+---
+
+## 7) Troubleshooting
+
+- **Nothing happens when I press F2**  
+  Make sure the console window where you launched `python main.py` is **focused** (active). Also confirm packages installed without errors.
+
+- **Hotkeys don’t work or need Admin**  
+  The `keyboard` library sometimes requires admin to capture global hotkeys. Try **Run as Administrator**.
+
+- **Image not found** / matching fails  
+  - Take a **new, tightly‑cropped screenshot** (PNG).  
+  - Ensure **Windows display scaling = 100%** for both taking and running the match.  
+  - Try a lower `confidence` like `0.75` (requires OpenCV).
+
+- **OpenCV build errors**  
+  Install VS C++ runtime (Microsoft Visual C++ Redistributable) and make sure Python is 64‑bit.
+
+
+---
+
+## 8) FAQ
+
+**Q: Can I run my task multiple times?**  
+**A:** Yes. Press **F2** to run once. When it finishes (you’ll see “✅ Run complete.”), press **F2** again to run it again.
+
+**Q: Can I keep a loop running forever?**  
+**A:** Sure — write your own loop inside `my_bot()` and check `fn.should_run()` and `fn.is_paused()` to be a good citizen.
+
+**Q: Where do screenshots get saved?**  
+**A:** If you enabled a screenshot hotkey, files are saved in the current working folder with timestamps.
+
+
+---
+
+## 9) License
+
+Do whatever you want. Attribution appreciated but not required.
