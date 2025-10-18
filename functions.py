@@ -17,6 +17,7 @@ try:
 except ImportError:
     keyboard = None
 
+
 # ================================= LOGGING =================================
 
 def log(text: str) -> None:
@@ -24,6 +25,7 @@ def log(text: str) -> None:
     timestamp = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
     log_message = f"{timestamp} - {text}"
     print(log_message)
+
 
 # ============================== WINDOW HELPERS ==============================
 
@@ -36,11 +38,13 @@ def focus_window(window_title: str) -> None:
     else:
         log(f"No window found with title: {window_title}")
 
+
 def find_windows(title_pattern: str, ignore_case: bool = True) -> List[gw.Win32Window]:
     """Return all windows whose title matches a regex pattern."""
     flags = re.IGNORECASE if ignore_case else 0
     pat = re.compile(title_pattern, flags)
     return [w for w in gw.getAllWindows() if pat.search(w.title or "")]
+
 
 def wait_for_window(title_pattern: str, timeout: int = 30) -> Optional[gw.Win32Window]:
     """Wait until a window appears with the given title regex; return the window or None."""
@@ -55,6 +59,7 @@ def wait_for_window(title_pattern: str, timeout: int = 30) -> Optional[gw.Win32W
     log(f"Timeout waiting for window '{title_pattern}'.")
     return None
 
+
 def minimize_window(title_pattern: str) -> bool:
     """Minimize the first window whose title matches a regex pattern."""
     wins = find_windows(title_pattern)
@@ -68,13 +73,17 @@ def minimize_window(title_pattern: str) -> bool:
         log(f"Failed to minimize: {e}")
         return False
 
+
 def close_window_by_title_part(title_part: str) -> None:
     """Send WM_CLOSE to any visible window whose title contains a substring."""
+
     def enum_windows_kill(hwnd, _):
         if win32gui.IsWindowVisible(hwnd) and title_part in win32gui.GetWindowText(hwnd):
             win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+
     win32gui.EnumWindows(enum_windows_kill, None)
     log(f"Closed windows containing: {title_part}")
+
 
 def close_all_windows(title_pattern: str) -> None:
     """Close all windows that match a title regex."""
@@ -86,17 +95,19 @@ def close_all_windows(title_pattern: str) -> None:
             pass
     log(f"Closed {len(wins)} windows matching '{title_pattern}'.")
 
+
 # ================================ PROCESSES =================================
 
 def is_exe_running(exe_name: str) -> bool:
     """Check if a process with a given name is running."""
     for process in psutil.process_iter():
         try:
-            if exe_name.lower() in process.name().lower():
+            if exe_name.lower() in (process.name() or "").lower():
                 return True
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
     return False
+
 
 def wait_for_exe(exe_name: str, timeout: int = 30) -> bool:
     """Wait until a process starts running; return True if found within timeout."""
@@ -110,6 +121,7 @@ def wait_for_exe(exe_name: str, timeout: int = 30) -> bool:
     log(f"Timeout waiting for {exe_name}.")
     return False
 
+
 def killProcess(process: str) -> None:
     """Force-kill a single process by name (taskkill)."""
     subprocess.Popen(
@@ -119,19 +131,22 @@ def killProcess(process: str) -> None:
     )
     log(f"Killed process: {process}.exe")
 
+
 def kill_all_by_name(process_name: str) -> None:
     """Kill all processes that contain the given name."""
     for p in psutil.process_iter():
         try:
-            if process_name.lower() in p.name().lower():
+            if process_name.lower() in (p.name() or "").lower():
                 p.kill()
                 log(f"Killed: {p.name()} (PID {p.pid})")
         except Exception:
             pass
 
+
 def reboot() -> None:
     """Reboot the Windows machine immediately (`shutdown /r /t 1`)."""
     os.system("shutdown /r /t 1")
+
 
 # ============================== MOUSE & KEYBOARD ============================
 
@@ -143,15 +158,18 @@ def screenshot(name: str = "screenshot") -> str:
     log(f"Screenshot saved: {filename}")
     return filename
 
+
 def move_mouse_safe(x: int, y: int, duration: float = 0.3) -> None:
     """Move the mouse smoothly to the given coordinates."""
     pyautogui.moveTo(x, y, duration=duration)
     log(f"Moved mouse to ({x}, {y})")
 
+
 def press_key(key: str) -> None:
-    """Simulate pressing a key."""
+    """Press a key (full press)."""
     pyautogui.press(key)
     log(f"Pressed key: {key}")
+
 
 def type_text(text: str, delay: float = 0.05) -> None:
     """Type text character by character (human-like)."""
@@ -160,52 +178,107 @@ def type_text(text: str, delay: float = 0.05) -> None:
         time.sleep(delay)
     log(f"Typed text: '{text}'")
 
+
 def random_sleep(min_s: float = 0.5, max_s: float = 1.5) -> None:
     """Sleep for a random time between given seconds (adds realism)."""
     dur = random.uniform(min_s, max_s)
     time.sleep(dur)
     log(f"Slept for {dur:.2f} seconds")
 
+
+# --- NEW: Keyboard hold/release utilities ---
+
+def key_down(key: str) -> None:
+    """Hold a keyboard key down (no release)."""
+    pyautogui.keyDown(key)
+    log(f"Key down: {key}")
+
+
+def key_up(key: str) -> None:
+    """Release a previously held keyboard key."""
+    pyautogui.keyUp(key)
+    log(f"Key up: {key}")
+
+
+def press_and_hold(key: str, seconds: float = 1.0) -> None:
+    """Press and hold a key for a duration, then release."""
+    pyautogui.keyDown(key)
+    log(f"Key down: {key} (holding {seconds:.2f}s)")
+    time.sleep(seconds)
+    pyautogui.keyUp(key)
+    log(f"Key up: {key}")
+
+
+# --- NEW: Mouse hold/release utilities ---
+
+def mouse_down(button: str = "left") -> None:
+    """Hold a mouse button down ('left', 'right', 'middle')."""
+    pyautogui.mouseDown(button=button)
+    log(f"Mouse down: {button}")
+
+
+def mouse_up(button: str = "left") -> None:
+    """Release a previously held mouse button."""
+    pyautogui.mouseUp(button=button)
+    log(f"Mouse up: {button}")
+
+
+def click_and_hold(seconds: float = 1.0, button: str = "left") -> None:
+    """Click and hold a mouse button for a duration, then release."""
+    pyautogui.mouseDown(button=button)
+    log(f"Mouse down: {button} (holding {seconds:.2f}s)")
+    time.sleep(seconds)
+    pyautogui.mouseUp(button=button)
+    log(f"Mouse up: {button}")
+
+
 # ============================== IMAGE FIND/CLICK ============================
 
 def find(image: str, breaking: bool = True, confidence: float = 0.8) -> bool:
-    """Poll the screen until an image is found."""
-    while 1:
+    """Poll the screen until an image is found. Returns True when found, False otherwise."""
+    while True:
         try:
-            location = pyautogui.locateOnScreen('./img/' + image + '.png', grayscale=False, confidence=confidence)
+            location = pyautogui.locateOnScreen(f'./img/{image}.png', grayscale=False, confidence=confidence)
             if location is not None:
-                log("I Found " + image + "!")
+                log(f"I found {image}!")
                 return True
-        except pyautogui.ImageNotFoundException:
-            if breaking:
-                log(image + " Icon not found, retrying...")
-            else:
-                log(image + " Icon not found, skipping...")
-                break
+        except Exception:
+            # PyAutoGUI typically returns None; any exception is treated like "not found yet"
+            pass
+
+        if breaking:
+            log(f"{image} icon not found, retrying...")
             time.sleep(1)
+        else:
+            log(f"{image} icon not found, skipping...")
+            break
     return False
 
+
 def find_and_click(image: str, breaking: bool = True, confidence: float = 0.8, double: bool = False) -> bool:
-    """Poll the screen for an image and click its center when found."""
-    while 1:
+    """Poll the screen for an image and click its center when found. Returns True if clicked."""
+    while True:
         try:
-            location = pyautogui.locateOnScreen('./img/' + image + '.png', grayscale=False, confidence=confidence)
+            location = pyautogui.locateOnScreen(f'./img/{image}.png', grayscale=False, confidence=confidence)
             if location is not None:
                 x, y = pyautogui.center(location)
                 if double:
                     pyautogui.doubleClick(x, y)
                 else:
                     pyautogui.click(x, y)
-                log("I Found " + image + " and clicked it!")
+                log(f"I found {image} and clicked it!")
                 return True
-        except pyautogui.ImageNotFoundException:
-            if breaking:
-                log(image + " Icon not found, retrying...")
-            else:
-                log(image + " Icon not found, skipping...")
-                break
+        except Exception:
+            pass
+
+        if breaking:
+            log(f"{image} icon not found, retrying...")
             time.sleep(1)
+        else:
+            log(f"{image} icon not found, skipping...")
+            break
     return False
+
 
 def safe_find_and_click(image: str, timeout: int = 20, confidence: float = 0.8) -> bool:
     """Try to find and click an image, but give up after a timeout; return True if clicked."""
@@ -218,56 +291,65 @@ def safe_find_and_click(image: str, timeout: int = 20, confidence: float = 0.8) 
     log(f"Timeout waiting for {image}.")
     return False
 
+
 def find_and_right_click(image: str, breaking: bool = True, confidence: float = 0.8) -> bool:
-    """Poll the screen for an image and right-click its center when found."""
-    while 1:
+    """Poll the screen for an image and right-click its center when found. Returns True if clicked."""
+    while True:
         try:
-            location = pyautogui.locateOnScreen('./img/' + image + '.png', grayscale=False, confidence=confidence)
+            location = pyautogui.locateOnScreen(f'./img/{image}.png', grayscale=False, confidence=confidence)
             if location is not None:
                 x, y = pyautogui.center(location)
                 pyautogui.click(x, y, button='right')
-                log("I Found " + image + " and right clicked it!")
+                log(f"I found {image} and right-clicked it!")
                 return True
-        except pyautogui.ImageNotFoundException:
-            if breaking:
-                log(image + " Icon not found, retrying...")
-            else:
-                log(image + " Icon not found, skipping...")
-                break
+        except Exception:
+            pass
+
+        if breaking:
+            log(f"{image} icon not found, retrying...")
             time.sleep(1)
+        else:
+            log(f"{image} icon not found, skipping...")
+            break
     return False
+
 
 # ================================ HOTKEY CORE ===============================
 
-# Interne state via Events
-_RUN_EVENT   = threading.Event()   # staat voor "mag draaien"
-_PAUSE_EVENT = threading.Event()   # staat voor "pauze is actief"
-_STOP_EVENT  = threading.Event()   # definitieve stop aangevraagd
+# Internal state via Events
+_RUN_EVENT = threading.Event()  # "may run" flag
+_PAUSE_EVENT = threading.Event()  # "pause is active"
+_STOP_EVENT = threading.Event()  # definitive stop requested
 _THREAD_REF: Optional[threading.Thread] = None
-_HOTKEY_HANDLES: list = []         # om hotkeys later los te koppelen
+_HOTKEY_HANDLES: list = []  # to unhook hotkeys later
+
 
 def _require_keyboard():
     """Raise a helpful error if 'keyboard' is not installed."""
     if keyboard is None:
         raise RuntimeError(
             "Hotkeys require the 'keyboard' package. Install with: pip install keyboard\n"
-            "On Windows kan admin nodig zijn voor globale hotkeys."
+            "On Windows, Administrator privileges may be required for global hotkeys."
         )
+
 
 def is_running() -> bool:
     """Return True if the task is marked as running and not stopped."""
     return _RUN_EVENT.is_set() and not _STOP_EVENT.is_set()
 
+
 def is_paused() -> bool:
     """Return True if pause is active."""
     return _PAUSE_EVENT.is_set()
 
+
 def should_run() -> bool:
     """
     Shortcut for cooperative loops:
-    Return False if a stop was requested, or not running.
+    Return False if a stop was requested, or not running, or currently paused.
     """
     return is_running() and not is_paused()
+
 
 def request_start() -> None:
     """Mark the system as running (clears stop & pause)."""
@@ -276,6 +358,7 @@ def request_start() -> None:
     _RUN_EVENT.set()
     log("▶️  START requested")
 
+
 def request_pause_toggle() -> None:
     """Toggle pause state."""
     if _PAUSE_EVENT.is_set():
@@ -283,7 +366,8 @@ def request_pause_toggle() -> None:
         log("⏯️  RESUME")
     else:
         _PAUSE_EVENT.set()
-        log("⏸️  PAUSE")
+        log("⏸️  Pause (after current loop)")
+
 
 def request_stop() -> None:
     """Request a definitive stop (also clears running)."""
@@ -291,17 +375,19 @@ def request_stop() -> None:
     _RUN_EVENT.clear()
     log("⏹️  STOP requested")
 
+
 def wait_until_stopped() -> None:
-    """Block until a stop is requested (e.g. user pressed Stop hotkey)."""
+    """Block until a stop is requested (e.g., user pressed Stop hotkey)."""
     _STOP_EVENT.wait()
+
 
 def run_with_controls(task_fn: Callable[..., None], *args, **kwargs) -> None:
     """
     Run your task function in a background thread with Start/Stop/Pause controls.
 
-    Your task_fn should be *cooperative*: inside any long-running loop, use:
-        - if not should_run(): break   # respect stop or not-running
-        - while is_paused(): time.sleep(0.2)  # pause loop
+    Your task_fn should be cooperative:
+      - if not should_run(): break     # respect stop or not-running
+      - while is_paused(): sleep       # pause loop
 
     Example
     -------
@@ -330,7 +416,7 @@ def run_with_controls(task_fn: Callable[..., None], *args, **kwargs) -> None:
         except Exception as e:
             log(f"Bot crashed: {e}")
         finally:
-            # Als de taak klaar is of crasht, reset running state
+            # When the task finishes or crashes, reset running state
             _RUN_EVENT.clear()
             _PAUSE_EVENT.clear()
             log("Bot thread finished.")
@@ -338,14 +424,15 @@ def run_with_controls(task_fn: Callable[..., None], *args, **kwargs) -> None:
     _THREAD_REF = threading.Thread(target=_runner, daemon=True)
     _THREAD_REF.start()
 
+
 # ================================ HOTKEY API ================================
 
 def setup_hotkeys(
-    start_key: str = "F1",
-    stop_key: str = "F2",
-    pause_key: str = "F3",
-    screenshot_key: Optional[str] = None,
-    custom_hotkeys: Optional[Dict[str, Callable[[], None]]] = None,
+        start_key: str = "F1",
+        stop_key: str = "F2",
+        pause_key: str = "F3",
+        screenshot_key: Optional[str] = None,
+        custom_hotkeys: Optional[Dict[str, Callable[[], None]]] = None,
 ) -> None:
     """
     Register global hotkeys for Start/Stop/Pause and optional extras.
@@ -359,7 +446,7 @@ def setup_hotkeys(
     pause_key : str
         Keyboard shortcut to toggle pause (default: 'F3').
     screenshot_key : Optional[str]
-        If provided, take a screenshot on this key (e.g. 'F12').
+        If provided, take a screenshot on this key (e.g., 'F12').
     custom_hotkeys : Optional[Dict[str, Callable]]
         Map of 'hotkey' -> callable for any extra bindings.
         Example: {'ctrl+alt+h': lambda: log('Hello')}
@@ -397,6 +484,7 @@ def setup_hotkeys(
             _HOTKEY_HANDLES.append(keyboard.add_hotkey(hk, fn))
             log(f"Hotkey bound: {hk} → {getattr(fn, '__name__', 'callback')}")
 
+
 def remove_hotkeys() -> None:
     """Unregister all previously registered hotkeys."""
     if keyboard is None:
@@ -408,11 +496,12 @@ def remove_hotkeys() -> None:
         _HOTKEY_HANDLES.clear()
         log("All hotkeys removed.")
 
+
 def hotkey_wait_loop(block: bool = True) -> None:
     """
     Optionally block the main thread to keep hotkeys alive.
 
-    - If block=True, this will wait until a STOP (F2) is requested.
+    - If block=True, this will wait until a STOP is requested.
     - If block=False, returns immediately (useful if your script already blocks).
     """
     if keyboard is None:
@@ -424,6 +513,7 @@ def hotkey_wait_loop(block: bool = True) -> None:
         remove_hotkeys()
         log("Exiting hotkey wait loop.")
 
+
 def run_hotkey_bot(bot_function: Callable[[], None]) -> None:
     """
     Universal hotkey-driven controller.
@@ -432,7 +522,7 @@ def run_hotkey_bot(bot_function: Callable[[], None]) -> None:
     - Press F4 to stop completely and exit.
 
     The bot_function is executed once per start trigger.
-    After completion, you can press F2 again to run again.
+    After completion, you can press F2 again to run it again.
     """
     setup_hotkeys(start_key="F2", stop_key="F4", pause_key="F3", screenshot_key="F12")
     log("Ready. Press F2 to start a run, F4 to stop.")
